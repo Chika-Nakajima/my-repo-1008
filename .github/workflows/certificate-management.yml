@@ -41,10 +41,23 @@ jobs:
             echo "File Path,File Name,Owner,PR_time,Timestamp" > $csv_file  # CSVヘッダーを追加
           fi
 
+          # 既存のCSVを読み込む
+          existing_entries=$(tail -n +2 $csv_file | sort)  # ヘッダーを除いた部分をソートして取得
+          new_entries=()  # 新しいエントリを格納する配列
+
           IFS=',' read -ra cert_array <<< "$certificates"
           for cert in "${cert_array[@]}"; do
             Timestamp=$(date +"%Y-%m-%d %H:%M:%S")  # 各行でアーティファクトの作成時間を取得
-            echo "$cert,$(basename "$cert"),$owner,$PR_time,$Timestamp" >> $csv_file  # それぞれの時間を使用
+            entry="$cert,$(basename "$cert"),$owner,$PR_time,$Timestamp"
+            # 新しいエントリが既存のものと異なる場合、追加する
+            if ! echo "$existing_entries" | grep -qF "$entry"; then
+              new_entries+=("$entry")
+            fi
+          done
+
+          # 新しいエントリを追記
+          for new_entry in "${new_entries[@]}"; do
+            echo "$new_entry" >> $csv_file
           done
 
       - name: Upload CSV as artifact
