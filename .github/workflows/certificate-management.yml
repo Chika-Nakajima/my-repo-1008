@@ -47,6 +47,11 @@ jobs:
         name: certificates
         path: certificates.csv
 
+    - name: Generate artifact download link
+      id: generate_link
+      run: |
+        echo "artifact_url=https://github.com/${{ github.repository }}/actions/artifacts/${{ steps.upload_artifact.outputs.artifact_id }}" >> $GITHUB_ENV
+
     - name: Notify Slack
       run: |
-        curl -X POST -H 'Content-type: application/json' --data '{"text":"新しい証明書が追加されました。必要事項を以下のリンクから記入してください。"}' ${{ secrets.SLACK_WEBHOOK_URL }}
+        curl -X POST -H 'Content-type: application/json' --data '{"text":"新しい証明書が追加されました。必要事項を以下のリンクから記入してください。\n'"${{ env.artifact_url }}"'"}' ${{ secrets.SLACK_WEBHOOK_URL }}
