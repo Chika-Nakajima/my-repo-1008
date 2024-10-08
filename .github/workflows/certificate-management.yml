@@ -24,8 +24,8 @@ jobs:
           certificates="${{ steps.find_certificates.outputs.certificates }}"
           csv_file="certificates.csv"
           timestamp=$(date +"%Y-%m-%d %H:%M:%S")
+          owner="${{ github.actor }}"  # プルリクエストのオーナー名を取得
           for cert in $certificates; do
-            owner=$(echo "$GITHUB_ACTOR")
             echo "$cert,$(basename $cert),$owner,$timestamp" >> $csv_file
           done
           # Append to the CSV file
@@ -38,19 +38,3 @@ jobs:
       - name: Notify Slack
         run: |
           curl -X POST -H 'Content-type: application/json' --data '{"text":"新しい証明書が追加されました。必要事項を以下のリンクから記入してください。"}' ${{ secrets.SLACK_WEBHOOK_URL }}
-
-  check_csv:
-    runs-on: ubuntu-latest
-    steps:   # これを修正
-      - name: Check CSV for missing info
-        run: |
-          csv_file="certificates.csv"
-          while IFS=, read -r path name owner timestamp; do
-            if [[ -z "$owner" || -z "$name" ]]; then
-              # Notify in case of missing info
-              curl -X POST -H 'Content-type: application/json' --data '{"text":"この証明書に関する記載内容に不備がありました。必要事項を以下のリンクから記入してください。"}' ${{ secrets.SLACK_WEBHOOK_URL }}
-            fi
-          done < $csv_file
-
-schedule:
-  - cron: '*/5 * * * *'
