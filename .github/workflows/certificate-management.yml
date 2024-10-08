@@ -33,12 +33,13 @@ jobs:
         run: |
           certificates="${{ env.certificates }}"
           csv_file="certificates.csv"
-          created_at="${{ github.event.pull_request.created_at }}"  # プルリクエストの作成時間を取得
+          PR_time="${{ github.event.pull_request.created_at }}"  # プルリクエストの作成時間を取得
+          Timestamp=$(date +"%Y-%m-%d %H:%M:%S")  # アーティファクトの作成時間を取得
           owner="${{ github.actor }}"
-          echo "File Path,File Name,Owner,Timestamp" > $csv_file  # CSVヘッダーを追加
+          echo "File Path,File Name,Owner,PR_time,Timestamp" > $csv_file  # CSVヘッダーを追加
           IFS=',' read -ra cert_array <<< "$certificates"
           for cert in "${cert_array[@]}"; do
-            echo "$cert,$(basename "$cert"),$owner,$created_at" >> $csv_file  # 作成時間を使用
+            echo "$cert,$(basename "$cert"),$owner,$PR_time,$Timestamp" >> $csv_file  # それぞれの時間を使用
           done
 
       - name: Upload CSV as artifact
