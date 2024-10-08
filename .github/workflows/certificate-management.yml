@@ -15,32 +15,29 @@ jobs:
       - name: Find certificates
         id: find_certificates
         run: |
-          # Find all certificate files
           find . -type f \( -name "*.pem" -o -name "*.crt" -o -name "*.cer" \) > certificates.txt || true
-          
-          # Check if certificates.txt is not empty
+          cat certificates.txt  # 内容を出力
           if [ -s certificates.txt ]; then
             echo "certificates=$(cat certificates.txt)" >> $GITHUB_ENV
           else
             echo "No certificates found."
-            exit 1  # Exit with an error if no certificates found
+            exit 1
           fi
+
+      - name: Check certificates environment variable
+        run: |
+          echo "Certificates: ${{ env.certificates }}"
 
       - name: Update CSV
         run: |
           certificates="${{ env.certificates }}"
           csv_file="certificates.csv"
           timestamp=$(date +"%Y-%m-%d %H:%M:%S")
-          owner="${{ github.actor }}"  # プルリクエストのオーナー名を取得
+          owner="${{ github.actor }}"
+          echo "File Path,File Name,Owner,Timestamp" > $csv_file  # CSVヘッダーを追加
           for cert in $certificates; do
-            echo "$(realpath "$cert"),$(basename "$cert"),$owner,$timestamp" >> $csv_file
+            echo "$cert,$(basename "$cert"),$owner,$timestamp" >> $csv_file
           done
-          # Append to the CSV file
-          if [[ -f $csv_file ]]; then
-            mv $csv_file $GITHUB_WORKSPACE/$csv_file
-          else
-            echo "File not found!"
-          fi
 
       - name: Notify Slack
         run: |
