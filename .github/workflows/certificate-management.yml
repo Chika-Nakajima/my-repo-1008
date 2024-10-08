@@ -12,17 +12,21 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v3
 
-      - name: Find certificates
-        id: find_certificates
+      - name: Find new certificates
+        id: find_new_certificates
         run: |
-          find . -type f \( -name "*.pem" -o -name "*.crt" -o -name "*.cer" \) > certificates.txt || true
-          cat certificates.txt # 内容を出力
-          if [ -s certificates.txt ]; then
-            certificates=$(tr '\n' ',' < certificates.txt | sed 's/,$//') # 最後のカンマを削除
+          # 変更されたファイルを取得
+          CHANGED_FILES=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }})
+          
+          # 新たに追加された証明書を探す
+          echo "$CHANGED_FILES" | grep -E '\.pem$|\.crt$|\.cer$' > new_certificates.txt || true
+          
+          if [ -s new_certificates.txt ]; then
+            certificates=$(tr '\n' ',' < new_certificates.txt | sed 's/,$//') # 最後のカンマを削除
             echo "certificates=$certificates" >> $GITHUB_ENV
           else
-            echo "No certificates found."
-            exit 1
+            echo "No new certificates found."
+            exit 0
           fi
 
       - name: Check certificates environment variable
