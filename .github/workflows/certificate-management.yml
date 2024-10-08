@@ -57,6 +57,12 @@ jobs:
 
         # アーティファクトのURLを取得
         artifact_url=$(curl -s -H "Authorization: token $GITHUB_TOKEN" $API_URL | jq -r --arg ARTIFACT_NAME "$ARTIFACT_NAME" '.artifacts[] | select(.name == $ARTIFACT_NAME) | .archive_download_url')
+        
+        if [ -z "$artifact_url" ]; then
+          echo "Artifact URL not found."
+          exit 1
+        fi
+
         echo "artifact_url=$artifact_url" >> $GITHUB_ENV
 
     - name: Notify Slack
