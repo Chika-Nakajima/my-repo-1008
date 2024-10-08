@@ -42,40 +42,24 @@ jobs:
         done
 
     - name: Upload CSV as artifact
-      id: upload_artifact  # アップロードステップにIDを付ける
       uses: actions/upload-artifact@v3
       with:
         name: certificates
         path: certificates.csv
 
-    - name: Get artifact ID
-      id: get_artifact_id
+    - name: Get artifact download URL
+      id: get_artifact
       run: |
         ARTIFACT_NAME="certificates"
-        RUN_ID=${{ github.run_id }}
-        ARTIFACT_INFO=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-        "https://api.github.com/repos/${{ github.repository }}/actions/runs/$RUN_ID/artifacts")
-    
-        echo "Artifact Info: $ARTIFACT_INFO"  # デバッグ出力
-    
-        # アーティファクトのIDを取得
-        ARTIFACT_ID=$(echo "$ARTIFACT_INFO" | jq -r '.artifacts[] | select(.name == "'"$ARTIFACT_NAME"'") | .id')
-    
-        echo "artifact_id=$ARTIFACT_ID" >> $GITHUB_ENV
-    
-        # アーティファクトIDが取得できなかった場合
-        if [ -z "$ARTIFACT_ID" ]; then
-          echo "No artifact found with the name: $ARTIFACT_NAME"
-          exit 1
-        fi
+        GITHUB_RUN_ID="${{ github.run_id }}"
+        GITHUB_TOKEN="${{ secrets.GITHUB_TOKEN }}"
+        API_URL="https://api.github.com/repos/${{ github.repository }}/actions/runs/$GITHUB_RUN_ID/artifacts"
 
-
-    - name: Generate artifact download link
-      run: |
-        RUN_ID=${{ github.run_id }}
-        ARTIFACT_ID=${{ env.artifact_id }}
-        echo "artifact_url=https://github.com/${{ github.repository }}/actions/runs/$RUN_ID/artifacts/$ARTIFACT_ID" >> $GITHUB_ENV
+        # アーティファクトのURLを取得
+        artifact_url=$(curl -s -H "Authorization: token $GITHUB_TOKEN" $API_URL | jq -r --arg ARTIFACT_NAME "$ARTIFACT_NAME" '.artifacts[] | select(.name == $ARTIFACT_NAME) | .archive_download_url')
+        echo "artifact_url=$artifact_url" >> $GITHUB_ENV
 
     - name: Notify Slack
       run: |
-        curl -X POST -H 'Content-type: application/json' --data '{"text":"新しい証明書が追加されました。必要事項を以下のリンクから記入してください。\n'"${{ env.artifact_url }}"'"}' ${{ secrets.SLACK_WEBHOOK_URL }}
+        artifact_url="${{ env.artifact_url }}"
+        curl -X POST -H 'Content-type: application/json' --data "{\"text\":\"新しい証明書が追加されました。必要事項を以下のリンクから記入してください。<${artifact_url}|ダウンロードリンク>\"}" ${{ secrets.SLACK_WEBHOOK_URL }}
