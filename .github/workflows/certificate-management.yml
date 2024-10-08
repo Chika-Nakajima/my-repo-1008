@@ -34,11 +34,16 @@ jobs:
           certificates="${{ env.certificates }}"
           csv_file="certificates.csv"
           PR_time="${{ github.event.pull_request.created_at }}"  # プルリクエストの作成時間を取得
-          Timestamp=$(date +"%Y-%m-%d %H:%M:%S")  # アーティファクトの作成時間を取得
           owner="${{ github.actor }}"
-          echo "File Path,File Name,Owner,PR_time,Timestamp" > $csv_file  # CSVヘッダーを追加
+
+          # ヘッダーがすでに存在するかをチェック
+          if [ ! -f $csv_file ]; then
+            echo "File Path,File Name,Owner,PR_time,Timestamp" > $csv_file  # CSVヘッダーを追加
+          fi
+
           IFS=',' read -ra cert_array <<< "$certificates"
           for cert in "${cert_array[@]}"; do
+            Timestamp=$(date +"%Y-%m-%d %H:%M:%S")  # 各行でアーティファクトの作成時間を取得
             echo "$cert,$(basename "$cert"),$owner,$PR_time,$Timestamp" >> $csv_file  # それぞれの時間を使用
           done
 
