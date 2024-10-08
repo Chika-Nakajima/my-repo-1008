@@ -18,7 +18,7 @@ jobs:
           find . -type f \( -name "*.pem" -o -name "*.crt" -o -name "*.cer" \) > certificates.txt || true
           cat certificates.txt  # 内容を出力
           if [ -s certificates.txt ]; then
-            echo "certificates=$(cat certificates.txt)" >> $GITHUB_ENV
+            printf "certificates=$(cat certificates.txt)\n" >> $GITHUB_ENV
           else
             echo "No certificates found."
             exit 1
@@ -35,9 +35,9 @@ jobs:
           timestamp=$(date +"%Y-%m-%d %H:%M:%S")
           owner="${{ github.actor }}"
           echo "File Path,File Name,Owner,Timestamp" > $csv_file  # CSVヘッダーを追加
-          for cert in $certificates; do
+          while IFS= read -r cert; do
             echo "$cert,$(basename "$cert"),$owner,$timestamp" >> $csv_file
-          done
+          done < certificates.txt
 
       - name: Notify Slack
         run: |
