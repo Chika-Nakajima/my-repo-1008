@@ -1,0 +1,56 @@
+name: Certificate Management
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  manage_certificates:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v2
+
+      - name: Find certificates
+        id: find_certificates
+        run: |
+          # Find all certificate files
+          find . -type f \( -name "*.pem" -o -name "*.crt" -o -name "*.cer" \) > certificates.txt || true
+          echo "::set-output name=certificates::$(cat certificates.txt)"
+
+      - name: Update CSV
+        run: |
+          certificates="${{ steps.find_certificates.outputs.certificates }}"
+          csv_file="certificates.csv"
+          timestamp=$(date +"%Y-%m-%d %H:%M:%S")
+          for cert in $certificates; do
+            owner=$(echo "$GITHUB_ACTOR")
+            echo "$cert,$(basename $cert),$owner,$timestamp" >> $csv_file
+          done
+          # Append to the CSV file
+          if [[ -f $csv_file ]]; then
+            mv $csv_file $GITHUB_WORKSPACE/$csv_file
+          else
+            echo "File not found!"
+          fi
+
+      - name: Notify Slack
+        run: |
+          curl -X POST -H 'Content-type: application/json' --data '{"text":"新しい証明書が追加されました。必要事項を以下のリンクから記入してください。"}' ${{ secrets.SLACK_WEBHOOK_URL }}
+
+  check_csv:
+    runs-on: ubuntu-latest
+    steps:   # これを修正
+      - name: Check CSV for missing info
+        run: |
+          csv_file="certificates.csv"
+          while IFS=, read -r path name owner timestamp; do
+            if [[ -z "$owner" || -z "$name" ]]; then
+              # Notify in case of missing info
+              curl -X POST -H 'Content-type: application/json' --data '{"text":"この証明書に関する記載内容に不備がありました。必要事項を以下のリンクから記入してください。"}' ${{ secrets.SLACK_WEBHOOK_URL }}
+            fi
+          done < $csv_file
+
+schedule:
+  - cron: '*/5 * * * *'
