@@ -41,6 +41,12 @@ jobs:
             echo "$cert,$(basename "$cert"),$owner,$timestamp" >> $csv_file
           done
 
+      - name: Upload CSV as artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: certificates
+          path: certificates.csv
+
       - name: Notify Slack
         run: |
           curl -X POST -H 'Content-type: application/json' --data '{"text":"新しい証明書が追加されました。必要事項を以下のリンクから記入してください。"}' ${{ secrets.SLACK_WEBHOOK_URL }}
