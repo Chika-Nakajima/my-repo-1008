@@ -10,18 +10,18 @@ jobs:
 
     steps:
       - name: Check out code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Find certificates
         id: find_certificates
         run: |
           # Find all certificate files
           find . -type f \( -name "*.pem" -o -name "*.crt" -o -name "*.cer" \) > certificates.txt || true
-          echo "::set-output name=certificates::$(cat certificates.txt)"
+          echo "certificates=$(cat certificates.txt)" >> $GITHUB_ENV
 
       - name: Update CSV
         run: |
-          certificates="${{ steps.find_certificates.outputs.certificates }}"
+          certificates="${{ env.certificates }}"
           csv_file="certificates.csv"
           timestamp=$(date +"%Y-%m-%d %H:%M:%S")
           owner="${{ github.actor }}"  # プルリクエストのオーナー名を取得
