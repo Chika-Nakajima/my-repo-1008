@@ -1,69 +1,52 @@
 name: Certificate Management
 
-permissions:
-  contents: write
-
 on:
-  pull_request:
-    types: [opened, synchronize]
+pull_request:
+types: [opened, synchronize]
 
 jobs:
-  manage_certificates:
-    runs-on: ubuntu-latest
+manage_certificates:
+runs-on: ubuntu-latest
 
-    steps:
-    - name: Check out code
-      uses: actions/checkout@v3
+steps:
+- name: Check out code
+uses: actions/checkout@v3
 
-    - name: Find certificates
-      id: find_certificates
-      run: |
-        find . -type f \( -name "*.pem" -o -name "*.crt" -o -name "*.cer" \) > certificates.txt || true
-        cat certificates.txt # 内容を出力
-        if [ -s certificates.txt ]; then
-          certificates=$(tr '\n' ',' < certificates.txt | sed 's/,$//') # 最後のカンマを削除
-          echo "certificates=$certificates" >> $GITHUB_ENV
-        else
-          echo "No certificates found."
-          exit 1
-        fi
+- name: Find certificates
+id: find_certificates
+run: |
+find . -type f \( -name "*.pem" -o -name "*.crt" -o -name "*.cer" \) > certificates.txt || true
+cat certificates.txt # 内容を出力
+if [ -s certificates.txt ]; then
+certificates=$(tr '\n' ',' < certificates.txt | sed 's/,$//') # 最後のカンマを削除
+echo "certificates=$certificates" >> $GITHUB_ENV
+else
+echo "No certificates found."
+exit 1
+fi
 
-    - name: Check certificates environment variable
-      run: |
-        echo "Certificates: ${{ env.certificates }}"
+- name: Check certificates environment variable
+run: |
+echo "Certificates: ${{ env.certificates }}"
 
-    - name: Update CSV
-      run: |
-        certificates="${{ env.certificates }}"
-        csv_file="certificates.csv"
-        timestamp=$(date +"%Y-%m-%d %H:%M:%S")
-        owner="${{ github.actor }}"
+- name: Update CSV
+run: |
+certificates="${{ env.certificates }}"
+csv_file="certificates.csv"
+timestamp=$(date +"%Y-%m-%d %H:%M:%S")
+owner="${{ github.actor }}"
+echo "File Path,File Name,Owner,Timestamp" > $csv_file # CSVヘッダーを追加
+IFS=',' read -ra cert_array <<< "$certificates"
+for cert in "${cert_array[@]}"; do
+echo "$cert,$(basename "$cert"),$owner,$timestamp" >> $csv_file
+done
 
-        # CSVファイルが存在する場合は追記、存在しない場合は新規作成
-        if [ -f "$csv_file" ]; then
-          echo "$certificates" | tr ',' '\n' | while read cert; do
-            echo "$cert,$(basename "$cert"),$owner,$timestamp" >> "$csv_file"
-          done
-        else
-          echo "File Path,File Name,Owner,Timestamp" > "$csv_file" # CSVヘッダーを追加
-          IFS=',' read -ra cert_array <<< "$certificates"
-          for cert in "${cert_array[@]}"; do
-            echo "$cert,$(basename "$cert"),$owner,$timestamp" >> "$csv_file"
-          done
-        fi
+- name: Upload CSV as artifact
+uses: actions/upload-artifact@v3
+with:
+name: certificates
+path: certificates.csv
 
-    - name: Commit and push CSV to repository
-      run: |
-        git config --local user.name "GitHub Actions"
-        git config --local user.email "actions@github.com"
-        git fetch origin main  # リモートの変更を取得
-        git merge origin/main  # リモートの変更をマージ
-        git add certificates.csv
-        git commit -m "Update certificates.csv with new certificates" || echo "No changes to commit"
-        git push origin HEAD:main  # プッシュ先のブランチを指定
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-    - name: Notify Slack
-      run: |
-        curl -X POST -H 'Content-type: application/json' --data '{"text":"新しい証明書が追加されました。必要事項を以下のリンクから記入してください。"}' ${{ secrets.SLACK_WEBHOOK_URL }}
+- name: Notify Slack
+run: |
+curl -X POST -H 'Content-type: application/json' --data '{"text":"新しい証明書が追加されました。必要事項を以下のリンクから記入してください。"}' ${{ secrets.SLACK_WEBHOOK_URL }}
