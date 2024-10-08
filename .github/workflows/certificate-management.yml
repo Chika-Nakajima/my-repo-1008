@@ -38,13 +38,10 @@ jobs:
       - name: Notify Slack
         run: |
           curl -X POST -H 'Content-type: application/json' --data '{"text":"新しい証明書が追加されました。必要事項を以下のリンクから記入してください。"}' ${{ secrets.SLACK_WEBHOOK_URL }}
-          
+
   check_csv:
     runs-on: ubuntu-latest
-    schedule:
-      - cron: '*/5 * * * *'
-
-    steps:
+    steps:   # これを修正
       - name: Check CSV for missing info
         run: |
           csv_file="certificates.csv"
@@ -54,3 +51,6 @@ jobs:
               curl -X POST -H 'Content-type: application/json' --data '{"text":"この証明書に関する記載内容に不備がありました。必要事項を以下のリンクから記入してください。"}' ${{ secrets.SLACK_WEBHOOK_URL }}
             fi
           done < $csv_file
+
+schedule:
+  - cron: '*/5 * * * *'
