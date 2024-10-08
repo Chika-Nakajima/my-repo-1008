@@ -42,9 +42,10 @@ jobs:
           fi
 
           # 既存のCSVを読み込む
-          existing_entries=$(tail -n +2 $csv_file | sort)  # ヘッダーを除いた部分をソートして取得
-          new_entries=()  # 新しいエントリを格納する配列
+          existing_entries=$(tail -n +2 $csv_file)  # ヘッダーを除いた部分を取得
 
+          # 新しいエントリを追加するためのフラグ
+          new_entries=()
           IFS=',' read -ra cert_array <<< "$certificates"
           for cert in "${cert_array[@]}"; do
             Timestamp=$(date +"%Y-%m-%d %H:%M:%S")  # 各行でアーティファクトの作成時間を取得
@@ -55,7 +56,7 @@ jobs:
             fi
           done
 
-          # 新しいエントリを追記
+          # 新しいエントリをCSVの最後に追記
           for new_entry in "${new_entries[@]}"; do
             echo "$new_entry" >> $csv_file
           done
