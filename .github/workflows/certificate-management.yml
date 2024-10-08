@@ -1,5 +1,8 @@
 name: Certificate Management
 
+permissions:
+  contents: write  # リポジトリのコンテンツに書き込み権限を付与
+
 on:
   pull_request:
     types: [opened, synchronize]
