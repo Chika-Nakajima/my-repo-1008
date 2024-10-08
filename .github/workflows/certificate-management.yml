@@ -42,6 +42,7 @@ jobs:
         done
 
     - name: Upload CSV as artifact
+      id: upload_artifact  # アップロードステップにIDを付ける
       uses: actions/upload-artifact@v3
       with:
         name: certificates
@@ -50,7 +51,8 @@ jobs:
     - name: Generate artifact download link
       id: generate_link
       run: |
-        echo "artifact_url=https://github.com/${{ github.repository }}/actions/artifacts/${{ steps.upload_artifact.outputs.artifact_id }}" >> $GITHUB_ENV
+        ARTIFACT_ID=$(echo "${{ steps.upload_artifact.outputs.artifact_id }}")
+        echo "artifact_url=https://github.com/${{ github.repository }}/actions/artifacts/$ARTIFACT_ID" >> $GITHUB_ENV
 
     - name: Notify Slack
       run: |
