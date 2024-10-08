@@ -17,7 +17,14 @@ jobs:
         run: |
           # Find all certificate files
           find . -type f \( -name "*.pem" -o -name "*.crt" -o -name "*.cer" \) > certificates.txt || true
-          echo "certificates=$(cat certificates.txt)" >> $GITHUB_ENV
+          
+          # Check if certificates.txt is not empty
+          if [ -s certificates.txt ]; then
+            echo "certificates=$(cat certificates.txt)" >> $GITHUB_ENV
+          else
+            echo "No certificates found."
+            exit 1  # Exit with an error if no certificates found
+          fi
 
       - name: Update CSV
         run: |
@@ -26,7 +33,7 @@ jobs:
           timestamp=$(date +"%Y-%m-%d %H:%M:%S")
           owner="${{ github.actor }}"  # プルリクエストのオーナー名を取得
           for cert in $certificates; do
-            echo "$cert,$(basename $cert),$owner,$timestamp" >> $csv_file
+            echo "$(realpath "$cert"),$(basename "$cert"),$owner,$timestamp" >> $csv_file
           done
           # Append to the CSV file
           if [[ -f $csv_file ]]; then
